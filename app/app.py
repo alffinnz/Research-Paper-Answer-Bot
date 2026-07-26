@@ -1,5 +1,9 @@
 import streamlit as st
 
+from auth.database import initialize_database
+from auth.login import show_login_page
+from auth.register import show_register_page
+from auth.session import current_user, is_logged_in, logout_user
 from rag.chatbot import ask_question
 
 
@@ -8,6 +12,15 @@ st.set_page_config(
     page_icon="📚",
     layout="wide",
 )
+
+initialize_database()
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "auth_page" not in st.session_state:
+    st.session_state.auth_page = "login"
 
 st.markdown(
     """
@@ -223,6 +236,34 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if not is_logged_in():
+    st.markdown(
+        """
+        <section class="hero" style="margin-bottom: 1.5rem;">
+            <div class="hero-kicker">Research Intelligence</div>
+            <h1 style="font-size: clamp(2.2rem, 6vw, 3.5rem);">Research Paper AI</h1>
+            <p class="hero-subtitle">Sign in to access your research assistant.</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    _, auth_column, _ = st.columns([1, 2, 1])
+    with auth_column:
+        with st.container(border=True):
+            if st.session_state.auth_page == "register":
+                show_register_page()
+                if st.button("Already have an account? Sign in", use_container_width=True):
+                    st.session_state.auth_page = "login"
+                    st.rerun()
+            else:
+                show_login_page()
+                if st.button("Need an account? Register", use_container_width=True):
+                    st.session_state.auth_page = "register"
+                    st.rerun()
+
+    st.stop()
+
 # Sidebar
 with st.sidebar:
     st.markdown(
@@ -240,6 +281,15 @@ with st.sidebar:
         """,
         unsafe_allow_html=True,
     )
+
+    user = current_user()
+    with st.container(border=True):
+        st.caption("LOGGED IN AS")
+        st.write(f"**{user['username']}**")
+        st.caption(str(user["email"]))
+        if st.button("Logout", use_container_width=True):
+            logout_user()
+            st.rerun()
 
     st.markdown(
         """
