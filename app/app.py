@@ -1,10 +1,13 @@
-import os
 import sys
+from pathlib import Path
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+APP_DIRECTORY = Path(__file__).resolve().parent
 
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+for import_path in (PROJECT_ROOT, APP_DIRECTORY):
+    import_path_string = str(import_path)
+    if import_path_string not in sys.path:
+        sys.path.insert(0, import_path_string)
 
 import streamlit as st
 

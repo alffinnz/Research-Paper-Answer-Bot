@@ -16,6 +16,14 @@ if ENV_PATH.is_file():
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
+    try:
+        import streamlit as st
+
+        GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY")
+    except Exception:
+        GOOGLE_API_KEY = None
+
+if not GOOGLE_API_KEY:
     raise EnvironmentError(
         "GOOGLE_API_KEY is missing. "
         "Set it in your local .env file or in Streamlit Secrets."
