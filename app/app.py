@@ -5,6 +5,9 @@ from auth.login import show_login_page
 from auth.register import show_register_page
 from auth.session import current_user, is_logged_in, logout_user
 from rag.chatbot import ask_question
+from upload.indexing import index_documents
+from upload.pdf_processor import load_pdf_documents
+from upload.uploader import render_upload_form
 
 
 st.set_page_config(
@@ -290,6 +293,29 @@ with st.sidebar:
         if st.button("Logout", use_container_width=True):
             logout_user()
             st.rerun()
+
+    with st.container(border=True):
+        st.markdown("#### 📄 Upload Research Paper")
+        uploaded_pdf_path = render_upload_form()
+
+        if uploaded_pdf_path:
+            try:
+                documents = load_pdf_documents(uploaded_pdf_path)
+                with st.status("Indexing...", expanded=True) as upload_status:
+                    st.write("Creating embeddings...")
+                    st.write("Updating vector database...")
+                    indexing_result = index_documents(documents)
+                    upload_status.update(label="Index completed", state="complete")
+            except (RuntimeError, ValueError) as error:
+                st.error(str(error))
+            else:
+                st.success("✔ Upload successful")
+                st.caption("Index completed")
+                st.write(f"**Filename:** {uploaded_pdf_path.name}")
+                pages_column, chunks_column = st.columns(2)
+                pages_column.metric("Pages processed", indexing_result.pages_processed)
+                chunks_column.metric("Chunks created", indexing_result.chunks_created)
+                st.metric("Embedding time", f"{indexing_result.embedding_time:.2f} sec")
 
     st.markdown(
         """
