@@ -2,8 +2,6 @@
 
 import time
 
-from rag.pipeline import retrieval_qa_chain
-
 
 def ask_question(question: str) -> dict:
     """Answer a non-empty research question with supporting source documents."""
@@ -11,12 +9,9 @@ def ask_question(question: str) -> dict:
         raise ValueError("Enter a non-empty research question.")
 
     started_at = time.perf_counter()
-    try:
-        result = retrieval_qa_chain.invoke({"input": question.strip()})
-    except Exception as error:
-        raise RuntimeError(
-            "The question could not be answered. Check Gemini API access and try again."
-        ) from error
+    from rag.pipeline import get_retrieval_qa_chain
+
+    result = get_retrieval_qa_chain().invoke({"input": question.strip()})
 
     response_time = time.perf_counter() - started_at
     source_documents = result.get("context", [])

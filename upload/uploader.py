@@ -59,12 +59,8 @@ def render_upload_form() -> Path | None:
         st.error("A paper with this filename has already been uploaded.")
         return None
 
-    try:
-        st.info("Uploading...")
-        PAPERS_DIRECTORY.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(uploaded_file.getvalue())
-    except OSError:
-        st.error("The PDF could not be saved. Please try again.")
-        return None
+    st.info("Uploading...")
+    PAPERS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(uploaded_file.getvalue())
 
     return destination

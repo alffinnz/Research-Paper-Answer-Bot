@@ -12,16 +12,18 @@ ENV_PATH = PROJECT_ROOT / ".env"
 if ENV_PATH.is_file():
     load_dotenv(dotenv_path=ENV_PATH, override=False)
 
-
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
+GOOGLE_API_KEY_SOURCE = ".env or environment"
 
 if not GOOGLE_API_KEY:
-    try:
-        import streamlit as st
+    import streamlit as st
 
-        GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY")
-    except Exception:
-        GOOGLE_API_KEY = None
+    try:
+        GOOGLE_API_KEY = str(st.secrets.get("GOOGLE_API_KEY", "")).strip()
+    except FileNotFoundError:
+        GOOGLE_API_KEY = ""
+    else:
+        GOOGLE_API_KEY_SOURCE = "Streamlit Secrets"
 
 if not GOOGLE_API_KEY:
     raise EnvironmentError(
@@ -29,13 +31,9 @@ if not GOOGLE_API_KEY:
         "Set it in your local .env file or in Streamlit Secrets."
     )
 
-try:
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2",
-        google_api_key=GOOGLE_API_KEY,
-    )
-except Exception as error:
-    raise RuntimeError(
-        "Gemini embedding initialization failed. "
-        "Verify your GOOGLE_API_KEY and internet connection."
-    ) from error
+EMBEDDING_MODEL = "gemini-embedding-2"
+
+embeddings = GoogleGenerativeAIEmbeddings(
+    model=EMBEDDING_MODEL,
+    google_api_key=GOOGLE_API_KEY,
+)

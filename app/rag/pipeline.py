@@ -1,32 +1,51 @@
 """Gemini retrieval-augmented generation chain."""
 
+import os
+from functools import lru_cache
+
+from google import genai
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from rag.embeddings import GOOGLE_API_KEY
-from rag.retriever import retriever
 
 
 if not GOOGLE_API_KEY:
     raise EnvironmentError("GOOGLE_API_KEY is required to create the Gemini chat model.")
 
-try:
+REQUESTED_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
+FALLBACK_CHAT_MODELS = ("gemini-2.0-flash",)
+
+
+@lru_cache(maxsize=1)
+def get_supported_chat_model_name() -> str:
+    """Use the requested model when available, otherwise choose a supported fallback."""
+    client = genai.Client(api_key=GOOGLE_API_KEY)
+    supported_models = {
+        model.name.removeprefix("models/")
+        for model in client.models.list()
+        if "generateContent" in (getattr(model, "supported_actions", None) or [])
+    }
+
+    for model_name in (REQUESTED_CHAT_MODEL, *FALLBACK_CHAT_MODELS):
+        if model_name in supported_models:
+            return model_name
+
+    raise RuntimeError("No Gemini model available to this API key supports generateContent.")
+
+
+@lru_cache(maxsize=1)
+def get_retrieval_qa_chain():
+    """Build the existing RAG chain after API and vector-store validation."""
+    from rag.retriever import get_retriever
+
     chat_model = ChatGoogleGenerativeAI(
-        model="gemini-3.5-flash",
+        model=get_supported_chat_model_name(),
         google_api_key=GOOGLE_API_KEY,
         temperature=0,
     )
-except Exception as error:
-    raise RuntimeError(
-        "Gemini chat model initialization failed. Verify GOOGLE_API_KEY and model access."
-    ) from error
-
-if chat_model is None:
-    raise RuntimeError("Gemini chat model initialization returned no model.")
-
-try:
     qa_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -39,8 +58,4 @@ try:
         ]
     )
     document_chain = create_stuff_documents_chain(chat_model, qa_prompt)
-    retrieval_qa_chain = create_retrieval_chain(retriever, document_chain)
-except Exception as error:
-    raise RuntimeError(
-        "Could not create the Gemini RetrievalQA chain. Verify the API key, model access, and Sections 8 dependencies."
-    ) from error
+    return create_retrieval_chain(get_retriever(), document_chain)

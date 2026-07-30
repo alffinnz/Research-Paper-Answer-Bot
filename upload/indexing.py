@@ -8,8 +8,6 @@ from time import perf_counter
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from rag.retriever import vector_store
-
 
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
@@ -29,13 +27,12 @@ def index_documents(documents: list[Document]) -> IndexingResult:
     if not chunks:
         raise ValueError("No text chunks could be created from this PDF.")
 
-    started_at = perf_counter()
-    try:
-        vector_store.add_documents(chunks)
-    except Exception as error:
-        raise RuntimeError("Embeddings could not be created for this PDF.") from error
+    from rag.retriever import vector_store
 
-    refresh_retriever()
+    started_at = perf_counter()
+    vector_store.add_documents(chunks)
+
+    refresh_retriever(vector_store)
     return IndexingResult(
         pages_processed=len(documents),
         chunks_created=len(chunks),
@@ -43,7 +40,7 @@ def index_documents(documents: list[Document]) -> IndexingResult:
     )
 
 
-def refresh_retriever() -> None:
+def refresh_retriever(vector_store) -> None:
     """Synchronize the live Chroma collection used by the existing retriever.
 
     The application's retriever queries this same ``vector_store`` object, so
