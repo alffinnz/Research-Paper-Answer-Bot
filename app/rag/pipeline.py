@@ -9,14 +9,14 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from rag.embeddings import GOOGLE_API_KEY
+from rag.gemini_config import GOOGLE_API_KEY
 
 
 if not GOOGLE_API_KEY:
     raise EnvironmentError("GOOGLE_API_KEY is required to create the Gemini chat model.")
 
-REQUESTED_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
-FALLBACK_CHAT_MODELS = ("gemini-2.0-flash",)
+REQUESTED_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash")
+FALLBACK_CHAT_MODELS = ("gemini-3.5-flash",)
 
 
 @lru_cache(maxsize=1)
@@ -42,7 +42,7 @@ def get_retrieval_qa_chain():
     from rag.retriever import get_retriever
 
     chat_model = ChatGoogleGenerativeAI(
-        model=get_supported_chat_model_name(),
+        model="gemini-3.5-flash",
         google_api_key=GOOGLE_API_KEY,
         temperature=0,
     )

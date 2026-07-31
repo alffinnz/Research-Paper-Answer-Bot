@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,7 @@ for import_path in (PROJECT_ROOT, APP_DIRECTORY):
 
 import streamlit as st
 
+from rag.gemini_config import emit_startup_diagnostic, gemini_error_message, is_gemini_error
 from auth.database import initialize_database
 from auth.login import show_login_page
 from auth.register import show_register_page
@@ -20,6 +22,8 @@ from upload.indexing import index_documents
 from upload.pdf_processor import load_pdf_documents
 from upload.uploader import render_upload_form
 
+
+emit_startup_diagnostic(os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash"))
 
 st.set_page_config(
     page_title="Research Paper AI",
@@ -447,8 +451,12 @@ with st.container(border=True):
         ask_clicked = st.button("🚀 Ask AI", use_container_width=True, type="primary")
 
 if ask_clicked and question:
-    with st.spinner("🔍 Searching research papers..."):
-        result = ask_question(question)
+    try:
+        with st.spinner("🔍 Searching research papers..."):
+            result = ask_question(question)
+    except Exception as error:
+        st.error(gemini_error_message(error) if is_gemini_error(error) else str(error))
+        st.stop()
 
     st.divider()
     st.success("✅ Answer generated successfully!")
